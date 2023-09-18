@@ -1,0 +1,610 @@
+diff --git a/migrations/mysql/2019-10-12-193526_initialise/down.sql b/migrations/mysql/2019-10-12-193526_initialise/down.sql
+new file mode 100644
+index 0000000..abf2789
+--- /dev/null
++++ b/migrations/mysql/2019-10-12-193526_initialise/down.sql
+@@ -0,0 +1,10 @@
++drop table `sessions`;
++drop table `salts`;
++drop table `author_tokens`;
++drop table `crate_authors`;
++drop table `crate_categories`;
++drop table `crate_keywords`;
++drop table `crates`;
++drop table `authors`;
++drop table `keywords`;
++drop table `categories`;
+diff --git a/migrations/mysql/2019-10-12-193526_initialise/up.sql b/migrations/mysql/2019-10-12-193526_initialise/up.sql
+new file mode 100644
+index 0000000..a9a843d
+--- /dev/null
++++ b/migrations/mysql/2019-10-12-193526_initialise/up.sql
+@@ -0,0 +1,67 @@
++create table `authors` (
++    `id` bigint not null auto_increment unique primary key,
++    `email` varchar(255) not null unique,
++    `name` varchar(255) not null,
++    `passwd` varchar(255) not null
++);
++create table `crates` (
++    `id` bigint not null auto_increment unique primary key,
++    `name` varchar(255) not null unique,
++    `description` varchar(4096),
++    `created_at` varchar(25) not null,
++    `updated_at` varchar(25) not null,
++    `downloads` bigint not null default 0,
++    `documentation` varchar(1024),
++    `repository` varchar(1024)
++);
++create table `keywords` (
++    `id` bigint not null auto_increment unique primary key,
++    `name` varchar(255) not null unique
++);
++create table `categories` (
++    `id` bigint not null auto_increment unique primary key,
++    `tag` varchar(255) not null unique,
++    `name` varchar(255) not null,
++    `description` varchar(512) not null
++);
++create table `sessions` (
++    `id` bigint not null auto_increment unique primary key,
++    `token` varchar(255) not null unique,
++    `author_id` bigint not null,
++    `expires` varchar(25) not null,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
++create table `salts` (
++    `id` bigint not null auto_increment unique primary key,
++    `salt` varchar(255) not null,
++    `author_id` bigint not null unique,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
++create table `author_tokens` (
++    `id` bigint not null auto_increment unique primary key,
++    `name` varchar(255) not null,
++    `token` varchar(255) not null unique,
++    `author_id` bigint not null,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
++create table `crate_authors` (
++    `id` bigint not null auto_increment unique primary key,
++    `crate_id` bigint not null,
++    `author_id` bigint not null,
++    foreign key (`crate_id`) references `crates`(`id`) on update cascade on delete cascade,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
++create table `crate_categories` (
++    `id` bigint not null auto_increment unique primary key,
++    `crate_id` bigint not null,
++    `category_id` bigint not null,
++    foreign key (`crate_id`) references `crates`(`id`) on update cascade on delete cascade,
++    foreign key (`category_id`) references `categories`(`id`) on update cascade on delete cascade
++);
++create table `crate_keywords` (
++    `id` bigint not null auto_increment unique primary key,
++    `crate_id` bigint not null,
++    `keyword_id` bigint not null,
++    foreign key (`crate_id`) references `crates`(`id`) on update cascade on delete cascade,
++    foreign key (`keyword_id`) references `keywords`(`id`) on update cascade on delete cascade
++);
+diff --git a/migrations/mysql/2019-12-28-072041_badges/down.sql b/migrations/mysql/2019-12-28-072041_badges/down.sql
+new file mode 100644
+index 0000000..2935174
+--- /dev/null
++++ b/migrations/mysql/2019-12-28-072041_badges/down.sql
+@@ -0,0 +1 @@
++drop table `crate_badges`;
+diff --git a/migrations/mysql/2019-12-28-072041_badges/up.sql b/migrations/mysql/2019-12-28-072041_badges/up.sql
+new file mode 100644
+index 0000000..7fbb228
+--- /dev/null
++++ b/migrations/mysql/2019-12-28-072041_badges/up.sql
+@@ -0,0 +1,7 @@
++create table `crate_badges` (
++    `id` bigint not null auto_increment unique primary key,
++    `crate_id` bigint not null,
++    `badge_type` varchar(255) not null,
++    `params` varchar(1024) not null,
++    foreign key (`crate_id`) references `crates`(`id`) on update cascade on delete cascade
++);
+diff --git a/migrations/mysql/2020-08-07-205435_canonical-names/down.sql b/migrations/mysql/2020-08-07-205435_canonical-names/down.sql
+new file mode 100644
+index 0000000..e045f80
+--- /dev/null
++++ b/migrations/mysql/2020-08-07-205435_canonical-names/down.sql
+@@ -0,0 +1 @@
++alter table `crates` drop column `canon_name`;
+diff --git a/migrations/mysql/2020-08-07-205435_canonical-names/up.sql b/migrations/mysql/2020-08-07-205435_canonical-names/up.sql
+new file mode 100644
+index 0000000..63ef4b1
+--- /dev/null
++++ b/migrations/mysql/2020-08-07-205435_canonical-names/up.sql
+@@ -0,0 +1,4 @@
++alter table `crates` add column `canon_name` varchar(255);
++update `crates` set `name` = lower(`name`), `canon_name` = replace(lower(`name`), '-', '_');
++alter table `crates` modify `canon_name` varchar(255) not null;
++alter table `crates` add unique (`canon_name`);
+diff --git a/migrations/mysql/2021-04-02-171822_sessions-refactor/down.sql b/migrations/mysql/2021-04-02-171822_sessions-refactor/down.sql
+new file mode 100644
+index 0000000..0b27f5b
+--- /dev/null
++++ b/migrations/mysql/2021-04-02-171822_sessions-refactor/down.sql
+@@ -0,0 +1,8 @@
++drop table `sessions`;
++create table `sessions` (
++    `id` bigint not null auto_increment unique primary key,
++    `token` varchar(255) not null unique,
++    `author_id` bigint not null,
++    `expires` varchar(25) not null,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
+diff --git a/migrations/mysql/2021-04-02-171822_sessions-refactor/up.sql b/migrations/mysql/2021-04-02-171822_sessions-refactor/up.sql
+new file mode 100644
+index 0000000..09e2d60
+--- /dev/null
++++ b/migrations/mysql/2021-04-02-171822_sessions-refactor/up.sql
+@@ -0,0 +1,8 @@
++drop table `sessions`;
++create table `sessions` (
++    `id` varchar(255) not null unique primary key,
++    `author_id` bigint,
++    `expiry` varchar(25) not null,
++    `data` text not null,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
+diff --git a/migrations/mysql/2021-10-12-215020_external_auth/down.sql b/migrations/mysql/2021-10-12-215020_external_auth/down.sql
+new file mode 100644
+index 0000000..0ccfdca
+--- /dev/null
++++ b/migrations/mysql/2021-10-12-215020_external_auth/down.sql
+@@ -0,0 +1,3 @@
++alter table `authors` drop column `github_id`;
++alter table `authors` drop column `gitlab_id`;
++alter table `authors` modify column `passwd` varchar(255) unique;
+diff --git a/migrations/mysql/2021-10-12-215020_external_auth/up.sql b/migrations/mysql/2021-10-12-215020_external_auth/up.sql
+new file mode 100644
+index 0000000..ba4a1b9
+--- /dev/null
++++ b/migrations/mysql/2021-10-12-215020_external_auth/up.sql
+@@ -0,0 +1,3 @@
++alter table `authors` add column `github_id` varchar(255) unique;
++alter table `authors` add column `gitlab_id` varchar(255) unique;
++alter table `authors` modify column `passwd` varchar(255);
+diff --git a/migrations/postgres/2019-10-12-193526_initialise/down.sql b/migrations/postgres/2019-10-12-193526_initialise/down.sql
+new file mode 100644
+index 0000000..e13f11f
+--- /dev/null
++++ b/migrations/postgres/2019-10-12-193526_initialise/down.sql
+@@ -0,0 +1,10 @@
++drop table "sessions";
++drop table "salts";
++drop table "author_tokens";
++drop table "crate_authors";
++drop table "crate_categories";
++drop table "crate_keywords";
++drop table "crates";
++drop table "authors";
++drop table "keywords";
++drop table "categories";
+diff --git a/migrations/postgres/2019-10-12-193526_initialise/up.sql b/migrations/postgres/2019-10-12-193526_initialise/up.sql
+new file mode 100644
+index 0000000..b7274a1
+--- /dev/null
++++ b/migrations/postgres/2019-10-12-193526_initialise/up.sql
+@@ -0,0 +1,67 @@
++create table "authors" (
++    "id" bigserial primary key,
++    "email" varchar(255) not null unique,
++    "name" varchar(255) not null,
++    "passwd" varchar(255) not null
++);
++create table "crates" (
++    "id" bigserial primary key,
++    "name" varchar(255) not null unique,
++    "description" varchar(4096),
++    "created_at" varchar(25) not null,
++    "updated_at" varchar(25) not null,
++    "downloads" bigint not null default 0,
++    "documentation" varchar(1024),
++    "repository" varchar(1024)
++);
++create table "keywords" (
++    "id" bigserial primary key,
++    "name" varchar(255) not null unique
++);
++create table "categories" (
++    "id" bigserial primary key,
++    "tag" varchar(255) not null unique,
++    "name" varchar(255) not null,
++    "description" varchar(512) not null
++);
++create table "sessions" (
++    "id" bigserial primary key,
++    "token" varchar(255) not null unique,
++    "author_id" bigint not null,
++    "expires" varchar(25) not null,
++    foreign key ("author_id") references "authors"("id") on update cascade on delete cascade
++);
++create table "salts" (
++    "id" bigserial primary key,
++    "salt" varchar(255) not null,
++    "author_id" bigint not null unique,
++    foreign key ("author_id") references "authors"("id") on update cascade on delete cascade
++);
++create table "author_tokens" (
++    "id" bigserial primary key,
++    "name" varchar(255) not null,
++    "token" varchar(255) not null unique,
++    "author_id" bigint not null,
++    foreign key ("author_id") references "authors"("id") on update cascade on delete cascade
++);
++create table "crate_authors" (
++    "id" bigserial primary key,
++    "crate_id" bigint not null,
++    "author_id" bigint not null,
++    foreign key ("crate_id") references "crates"("id") on update cascade on delete cascade,
++    foreign key ("author_id") references "authors"("id") on update cascade on delete cascade
++);
++create table "crate_categories" (
++    "id" bigserial primary key,
++    "crate_id" bigint not null,
++    "category_id" bigint not null,
++    foreign key ("crate_id") references "crates"("id") on update cascade on delete cascade,
++    foreign key ("category_id") references "categories"("id") on update cascade on delete cascade
++);
++create table "crate_keywords" (
++    "id" bigserial primary key,
++    "crate_id" bigint not null,
++    "keyword_id" bigint not null,
++    foreign key ("crate_id") references "crates"("id") on update cascade on delete cascade,
++    foreign key ("keyword_id") references "keywords"("id") on update cascade on delete cascade
++);
+diff --git a/migrations/postgres/2019-12-28-072041_badges/down.sql b/migrations/postgres/2019-12-28-072041_badges/down.sql
+new file mode 100644
+index 0000000..a5e081f
+--- /dev/null
++++ b/migrations/postgres/2019-12-28-072041_badges/down.sql
+@@ -0,0 +1 @@
++drop table "crate_badges";
+diff --git a/migrations/postgres/2019-12-28-072041_badges/up.sql b/migrations/postgres/2019-12-28-072041_badges/up.sql
+new file mode 100644
+index 0000000..2fe9107
+--- /dev/null
++++ b/migrations/postgres/2019-12-28-072041_badges/up.sql
+@@ -0,0 +1,7 @@
++create table "crate_badges" (
++    "id" bigserial primary key,
++    "crate_id" bigint not null,
++    "badge_type" varchar(255) not null,
++    "params" varchar(1024) not null,
++    foreign key ("crate_id") references "crates"("id") on update cascade on delete cascade
++);
+diff --git a/migrations/postgres/2020-08-07-205435_canonical-names/down.sql b/migrations/postgres/2020-08-07-205435_canonical-names/down.sql
+new file mode 100644
+index 0000000..22acc3d
+--- /dev/null
++++ b/migrations/postgres/2020-08-07-205435_canonical-names/down.sql
+@@ -0,0 +1 @@
++alter table "crates" drop column "canon_name";
+diff --git a/migrations/postgres/2020-08-07-205435_canonical-names/up.sql b/migrations/postgres/2020-08-07-205435_canonical-names/up.sql
+new file mode 100644
+index 0000000..4dd3213
+--- /dev/null
++++ b/migrations/postgres/2020-08-07-205435_canonical-names/up.sql
+@@ -0,0 +1,4 @@
++alter table "crates" add column "canon_name" varchar(255);
++update "crates" set "name" = lower("name"), "canon_name" = replace(lower("name"), '-', '_');
++alter table "crates" alter column "canon_name" set not null;
++alter table "crates" add unique ("canon_name");
+diff --git a/migrations/postgres/2021-04-02-171822_sessions-refactor/down.sql b/migrations/postgres/2021-04-02-171822_sessions-refactor/down.sql
+new file mode 100644
+index 0000000..36f7997
+--- /dev/null
++++ b/migrations/postgres/2021-04-02-171822_sessions-refactor/down.sql
+@@ -0,0 +1,8 @@
++drop table "sessions";
++create table "sessions" (
++    "id" bigserial primary key,
++    "token" varchar(255) not null unique,
++    "author_id" bigint not null,
++    "expires" varchar(25) not null,
++    foreign key ("author_id") references "authors"("id") on update cascade on delete cascade
++);
+diff --git a/migrations/postgres/2021-04-02-171822_sessions-refactor/up.sql b/migrations/postgres/2021-04-02-171822_sessions-refactor/up.sql
+new file mode 100644
+index 0000000..52d7c4a
+--- /dev/null
++++ b/migrations/postgres/2021-04-02-171822_sessions-refactor/up.sql
+@@ -0,0 +1,8 @@
++drop table "sessions";
++create table "sessions" (
++    "id" varchar(255) primary key,
++    "author_id" bigserial,
++    "expiry" varchar(25) not null,
++    "data" text not null,
++    foreign key ("author_id") references "authors"("id") on update cascade on delete cascade
++);
+diff --git a/migrations/postgres/2021-10-12-215020_external_auth/down.sql b/migrations/postgres/2021-10-12-215020_external_auth/down.sql
+new file mode 100644
+index 0000000..7335cb1
+--- /dev/null
++++ b/migrations/postgres/2021-10-12-215020_external_auth/down.sql
+@@ -0,0 +1,4 @@
++alter table "authors" drop column "github_id";
++alter table "authors" drop column "gitlab_id";
++alter table "authors" alter column "passwd" varchar(255) unique;
++alter table "authors" alter column "passwd" set not null;
+diff --git a/migrations/postgres/2021-10-12-215020_external_auth/up.sql b/migrations/postgres/2021-10-12-215020_external_auth/up.sql
+new file mode 100644
+index 0000000..5b38d65
+--- /dev/null
++++ b/migrations/postgres/2021-10-12-215020_external_auth/up.sql
+@@ -0,0 +1,4 @@
++alter table "authors" add column "github_id" varchar(255) unique;
++alter table "authors" add column "gitlab_id" varchar(255) unique;
++alter table "authors" alter column "passwd" type varchar(255);
++alter table "authors" alter column "passwd" drop not null;
+diff --git a/migrations/postgres/2022-09-18-221703_sessions-refactor-2/down.sql b/migrations/postgres/2022-09-18-221703_sessions-refactor-2/down.sql
+new file mode 100644
+index 0000000..52d7c4a
+--- /dev/null
++++ b/migrations/postgres/2022-09-18-221703_sessions-refactor-2/down.sql
+@@ -0,0 +1,8 @@
++drop table "sessions";
++create table "sessions" (
++    "id" varchar(255) primary key,
++    "author_id" bigserial,
++    "expiry" varchar(25) not null,
++    "data" text not null,
++    foreign key ("author_id") references "authors"("id") on update cascade on delete cascade
++);
+diff --git a/migrations/postgres/2022-09-18-221703_sessions-refactor-2/up.sql b/migrations/postgres/2022-09-18-221703_sessions-refactor-2/up.sql
+new file mode 100644
+index 0000000..7109efc
+--- /dev/null
++++ b/migrations/postgres/2022-09-18-221703_sessions-refactor-2/up.sql
+@@ -0,0 +1,8 @@
++drop table "sessions";
++create table "sessions" (
++    "id" varchar(255) primary key,
++    "author_id" bigint,
++    "expiry" varchar(25) not null,
++    "data" text not null,
++    foreign key ("author_id") references "authors"("id") on update cascade on delete cascade
++);
+diff --git a/migrations/sqlite/2019-10-12-193526_initialise/down.sql b/migrations/sqlite/2019-10-12-193526_initialise/down.sql
+new file mode 100644
+index 0000000..abf2789
+--- /dev/null
++++ b/migrations/sqlite/2019-10-12-193526_initialise/down.sql
+@@ -0,0 +1,10 @@
++drop table `sessions`;
++drop table `salts`;
++drop table `author_tokens`;
++drop table `crate_authors`;
++drop table `crate_categories`;
++drop table `crate_keywords`;
++drop table `crates`;
++drop table `authors`;
++drop table `keywords`;
++drop table `categories`;
+diff --git a/migrations/sqlite/2019-10-12-193526_initialise/up.sql b/migrations/sqlite/2019-10-12-193526_initialise/up.sql
+new file mode 100644
+index 0000000..6476d74
+--- /dev/null
++++ b/migrations/sqlite/2019-10-12-193526_initialise/up.sql
+@@ -0,0 +1,67 @@
++create table `authors` (
++    `id` integer primary key,
++    `email` varchar(255) not null unique,
++    `name` varchar(255) not null,
++    `passwd` varchar(255) not null
++);
++create table `crates` (
++    `id` integer primary key,
++    `name` varchar(255) not null unique,
++    `description` varchar(4096),
++    `created_at` varchar(25) not null,
++    `updated_at` varchar(25) not null,
++    `downloads` bigint not null default 0,
++    `documentation` varchar(1024),
++    `repository` varchar(1024)
++);
++create table `keywords` (
++    `id` integer primary key,
++    `name` varchar(255) not null unique
++);
++create table `categories` (
++    `id` integer primary key,
++    `tag` varchar(255) not null unique,
++    `name` varchar(255) not null,
++    `description` varchar(512) not null
++);
++create table `sessions` (
++    `id` integer primary key,
++    `token` varchar(255) not null unique,
++    `author_id` bigint not null,
++    `expires` varchar(25) not null,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
++create table `salts` (
++    `id` integer primary key,
++    `salt` varchar(255) not null,
++    `author_id` bigint not null unique,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
++create table `author_tokens` (
++    `id` integer primary key,
++    `name` varchar(255) not null,
++    `token` varchar(255) not null unique,
++    `author_id` bigint not null,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
++create table `crate_authors` (
++    `id` integer primary key,
++    `crate_id` bigint not null,
++    `author_id` bigint not null,
++    foreign key (`crate_id`) references `crates`(`id`) on update cascade on delete cascade,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
++create table `crate_categories` (
++    `id` integer primary key,
++    `crate_id` bigint not null,
++    `category_id` bigint not null,
++    foreign key (`crate_id`) references `crates`(`id`) on update cascade on delete cascade,
++    foreign key (`category_id`) references `categories`(`id`) on update cascade on delete cascade
++);
++create table `crate_keywords` (
++    `id` integer primary key,
++    `crate_id` bigint not null,
++    `keyword_id` bigint not null,
++    foreign key (`crate_id`) references `crates`(`id`) on update cascade on delete cascade,
++    foreign key (`keyword_id`) references `keywords`(`id`) on update cascade on delete cascade
++);
+diff --git a/migrations/sqlite/2019-12-28-072041_badges/down.sql b/migrations/sqlite/2019-12-28-072041_badges/down.sql
+new file mode 100644
+index 0000000..2935174
+--- /dev/null
++++ b/migrations/sqlite/2019-12-28-072041_badges/down.sql
+@@ -0,0 +1 @@
++drop table `crate_badges`;
+diff --git a/migrations/sqlite/2019-12-28-072041_badges/up.sql b/migrations/sqlite/2019-12-28-072041_badges/up.sql
+new file mode 100644
+index 0000000..ca0ec8f
+--- /dev/null
++++ b/migrations/sqlite/2019-12-28-072041_badges/up.sql
+@@ -0,0 +1,7 @@
++create table `crate_badges` (
++    `id` integer primary key,
++    `crate_id` bigint not null,
++    `badge_type` varchar(255) not null,
++    `params` varchar(1024) not null,
++    foreign key (`crate_id`) references `crates`(`id`) on update cascade on delete cascade
++);
+diff --git a/migrations/sqlite/2020-08-07-205435_canonical-names/down.sql b/migrations/sqlite/2020-08-07-205435_canonical-names/down.sql
+new file mode 100644
+index 0000000..868eb79
+--- /dev/null
++++ b/migrations/sqlite/2020-08-07-205435_canonical-names/down.sql
+@@ -0,0 +1,14 @@
++alter table `crates` rename to `crates_old`;
++create table `crates` (
++    `id` integer primary key,
++    `name` varchar(255) not null unique,
++    `description` varchar(4096),
++    `created_at` varchar(25) not null,
++    `updated_at` varchar(25) not null,
++    `downloads` bigint not null default 0,
++    `documentation` varchar(1024),
++    `repository` varchar(1024)
++);
++insert into `crates` (`id`, `name`, `description`, `created_at`, `updated_at`, `downloads`, `documentation`, `repository`)
++    select `id`, `name`, `description`, `created_at`, `updated_at`, `downloads`, `documentation`, `repository` from `crates_old`;
++drop table `crates_old`;
+diff --git a/migrations/sqlite/2020-08-07-205435_canonical-names/up.sql b/migrations/sqlite/2020-08-07-205435_canonical-names/up.sql
+new file mode 100644
+index 0000000..cf206d7
+--- /dev/null
++++ b/migrations/sqlite/2020-08-07-205435_canonical-names/up.sql
+@@ -0,0 +1,15 @@
++alter table `crates` rename to `crates_old`;
++create table `crates` (
++    `id` integer primary key,
++    `name` varchar(255) not null unique,
++    `canon_name` varchar(255) not null unique, -- <- NEW FIELD
++    `description` varchar(4096),
++    `created_at` varchar(25) not null,
++    `updated_at` varchar(25) not null,
++    `downloads` bigint not null default 0,
++    `documentation` varchar(1024),
++    `repository` varchar(1024)
++);
++insert into `crates` (`id`, `name`, `canon_name`, `description`, `created_at`, `updated_at`, `downloads`, `documentation`, `repository`)
++    select `id`, lower(`name`), replace(lower(`name`), '-', '_'), `description`, `created_at`, `updated_at`, `downloads`, `documentation`, `repository` from `crates_old`;
++drop table `crates_old`;
+diff --git a/migrations/sqlite/2021-04-02-171822_sessions-refactor/down.sql b/migrations/sqlite/2021-04-02-171822_sessions-refactor/down.sql
+new file mode 100644
+index 0000000..67e8132
+--- /dev/null
++++ b/migrations/sqlite/2021-04-02-171822_sessions-refactor/down.sql
+@@ -0,0 +1,8 @@
++drop table `sessions`;
++create table `sessions` (
++    `id` integer primary key,
++    `token` varchar(255) not null unique,
++    `author_id` bigint not null,
++    `expires` varchar(25) not null,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
+diff --git a/migrations/sqlite/2021-04-02-171822_sessions-refactor/up.sql b/migrations/sqlite/2021-04-02-171822_sessions-refactor/up.sql
+new file mode 100644
+index 0000000..238747f
+--- /dev/null
++++ b/migrations/sqlite/2021-04-02-171822_sessions-refactor/up.sql
+@@ -0,0 +1,8 @@
++drop table `sessions`;
++create table `sessions` (
++    `id` varchar(255) primary key,
++    `author_id` integer,
++    `expiry` varchar(25) not null,
++    `data` text not null,
++    foreign key (`author_id`) references `authors`(`id`) on update cascade on delete cascade
++);
+diff --git a/migrations/sqlite/2021-10-12-215020_external_auth/down.sql b/migrations/sqlite/2021-10-12-215020_external_auth/down.sql
+new file mode 100644
+index 0000000..1382217
+--- /dev/null
++++ b/migrations/sqlite/2021-10-12-215020_external_auth/down.sql
+@@ -0,0 +1,10 @@
++alter table `authors` rename to `authors_old`;
++create table `authors` (
++    `id` integer primary key,
++    `email` varchar(255) not null unique,
++    `name` varchar(255) not null,
++    `passwd` varchar(255) unique,
++);
++insert into `authors` (`id`, `email`, `name`, `passwd`)
++    select `id`, `email`, `name`, `passwd` from `authors_old`;
++drop table `authors_old`;
+diff --git a/migrations/sqlite/2021-10-12-215020_external_auth/up.sql b/migrations/sqlite/2021-10-12-215020_external_auth/up.sql
+new file mode 100644
+index 0000000..d1e70ac
+--- /dev/null
++++ b/migrations/sqlite/2021-10-12-215020_external_auth/up.sql
+@@ -0,0 +1,12 @@
++alter table `authors` rename to `authors_old`;
++create table `authors` (
++    `id` integer primary key,
++    `email` varchar(255) not null unique,
++    `name` varchar(255) not null,
++    `passwd` varchar(255),
++    `github_id` varchar(255) unique,
++    `gitlab_id` varchar(255) unique
++);
++insert into `authors` (`id`, `email`, `name`, `passwd`)
++    select `id`, `email`, `name`, `passwd` from `authors_old`;
++drop table `authors_old`;
+diff --git a/src/db/mod.rs b/src/db/mod.rs
+index 0f98a1b..74b781f 100644
+--- a/src/db/mod.rs
++++ b/src/db/mod.rs
+@@ -9,13 +9,13 @@ pub mod schema;
+
+ /// The SQL migrations (for MySQL/MariaDB).
+ #[cfg(feature = "mysql")]
+-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations/mysql");
++pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/mysql");
+ /// The SQL migrations (for SQLite).
+ #[cfg(feature = "sqlite")]
+-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations/sqlite");
++pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/sqlite");
+ /// The SQL migrations (for PostgreSQL).
+ #[cfg(feature = "postgres")]
+-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("../../migrations/postgres");
++pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!("migrations/postgres");
+
+ /// The format in which datetime records are saved in the database.
+ pub static DATETIME_FORMAT: &str = "%Y-%m-%d %H:%M:%S";
+--
+2.40.1
+
